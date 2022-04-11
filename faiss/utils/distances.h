@@ -276,6 +276,22 @@ void knn_L2sqr(
         int64_t* indexes,
         const float* y_norm2 = nullptr);
 
+/** Return the k nearest neighors of each of the nx vectors x among the ny
+ *  vector y, for the Stereographic distance
+ * @param x    query vectors, size nx * d
+ * @param y    database vectors, size ny * d
+ * @param res  result heap strcture, which also provides k. Sorted on output
+ * @param curvature    the curvature of Stereographic model
+ */
+void knn_Stereographic(
+        const float* x,
+        const float* y,
+        size_t d,
+        size_t nx,
+        size_t ny,
+        float_maxheap_array_t* res,
+        float curvature);
+
 /* Find the nearest neighbors for nx queries in a set of ny vectors
  * indexed by ids. May be useful for re-ranking a pre-selected vector list
  */

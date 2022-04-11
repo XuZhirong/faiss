@@ -62,6 +62,14 @@ struct IndexFlat : IndexFlatCodes {
 
     FlatCodesDistanceComputer* get_FlatCodesDistanceComputer() const override;
 
+    /* Get the configuration of Stereographic model*/
+    void set_config(float curvature)
+    {
+        this->curvature = curvature;
+    }
+    // configuations
+    float curvature;
+
     /* The stanadlone codec interface (just memcopies in this case) */
     void sa_encode(idx_t n, const float* x, uint8_t* bytes) const override;
 
@@ -76,6 +84,12 @@ struct IndexFlatIP : IndexFlat {
 struct IndexFlatL2 : IndexFlat {
     explicit IndexFlatL2(idx_t d) : IndexFlat(d, METRIC_L2) {}
     IndexFlatL2() {}
+};
+
+struct IndexFlatStereographic : IndexFlat {
+    IndexFlatStereographic(idx_t d, float curvature) : IndexFlat(d, METRIC_Stereographic) {
+        set_config(curvature);
+    }
 };
 
 /// optimized version for 1D "vectors".

@@ -37,6 +37,8 @@ typedef enum FaissMetricType {
     METRIC_Canberra = 20,
     METRIC_BrayCurtis,
     METRIC_JensenShannon,
+
+    METRIC_Stereographic, // distance in stereographic model 
 } FaissMetricType;
 
 /// Opaque type for referencing to an index object

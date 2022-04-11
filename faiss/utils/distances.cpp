@@ -388,6 +388,96 @@ void knn_L2sqr(
     knn_L2sqr(x, y, d, nx, ny, &heaps, y_norm2);
 }
 
+/* some numerical stability functions */
+float clip(float v) {
+	if(v < 1e-13) {
+		return 1e-13;
+	} 
+	if(v > 1e13) {
+	  return 1e13;
+	}
+	return v;
+}
+
+float ArTanC(float x, float curvature)
+{
+    if (curvature > 0)
+    {
+        float sqrt_c = std::sqrt(curvature);
+        return std::atan(sqrt_c * x) / sqrt_c;
+    }
+    else if (curvature < 0)
+    {
+        float sqrt_negative_c = std::sqrt(-curvature);
+        return std::atanh(sqrt_negative_c * x) /sqrt_negative_c;
+    }
+    else
+    {
+        return x;
+    }
+}
+
+float fvec_stereographic_ref (
+			float a, 
+			float b,
+			const float* x, 
+			const float* y, 
+			size_t d) {
+
+	float res = 0;
+	for (size_t i = 0; i < d; i++) {
+		const float tmp = -a * x[i] + b * y[i];
+		res += tmp * tmp;
+	}
+	return res;
+}
+
+void knn_Stereographic(
+        const float* x,
+        const float* y,
+        size_t d,
+        size_t nx,
+        size_t ny,
+        float_maxheap_array_t* res,
+        float curvature) {
+        size_t k = res->k;
+
+    size_t check_period = InterruptCallback::get_period_hint (ny * d);
+    check_period *= omp_get_max_threads();
+
+    for (size_t i0 = 0; i0 < nx; i0 += check_period) {
+        size_t i1 = std::min(i0 + check_period, nx);
+
+#pragma omp parallel for
+        for (size_t i = i0; i < i1; i++) {
+            const float * x_i = x + i * d;
+            const float * y_j = y;
+            size_t j;
+            float * simi = res->get_val(i);
+            int64_t * idxi = res->get_ids (i);
+
+            maxheap_heapify (k, simi, idxi);
+            for (j = 0; j < ny; j++) {
+                float xy = -fvec_inner_product (x_i, y_j, d);
+                float x2 = fvec_norm_L2sqr(x_i, d);
+                float y2 = fvec_norm_L2sqr(y_j, d);
+                float denom = clip(1 - 2 * curvature * xy + curvature * curvature * x2 * y2);
+                float a = (1 - 2 * curvature * xy - curvature * y2) / denom; 
+                float b = (1 + curvature * x2) / denom; 
+                float raw_disij = fvec_stereographic_ref(a, b, x_i, y_j , d);
+                float disij = ArTanC(raw_disij, curvature);
+                if (disij < simi[0]) {
+                    maxheap_pop (k, simi, idxi);
+                    maxheap_push (k, simi, idxi, disij, j);
+                }
+                y_j += d;
+            }
+            maxheap_reorder (k, simi, idxi);
+        }
+        InterruptCallback::check ();
+    }
+}
+
 /***************************************************************************
  * Range search
  ***************************************************************************/
